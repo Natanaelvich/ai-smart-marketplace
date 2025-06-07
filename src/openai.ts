@@ -48,8 +48,8 @@ const tools: ChatCompletionTool[] = [
 
 const generateCompletion = async (
   messages: ChatCompletionMessageParam[],
-  format: any
-) => {
+  format: ReturnType<typeof zodResponseFormat<typeof schema>>
+): Promise<OpenAI.Chat.Completions.ChatCompletion> => {
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     max_tokens: 100,
@@ -61,27 +61,6 @@ const generateCompletion = async (
   if (completion.choices[0].message.refusal) {
     throw new Error("Refusal");
   }
-
-  return completion;
-};
-
-export const generateProducts = async (message: string) => {
-  const messages: ChatCompletionMessageParam[] = [
-    {
-      role: "developer",
-      content:
-        "Liste três produtos que atendam a necessidade do usuário. Considere apenas os produtos em estoque.",
-    },
-    {
-      role: "user",
-      content: message,
-    },
-  ];
-
-  const completion = await generateCompletion(
-    messages,
-    zodResponseFormat(schema, "produtos_schema")
-  );
 
   const { tool_calls } = completion.choices[0].message;
   if (tool_calls) {
@@ -101,12 +80,33 @@ export const generateProducts = async (message: string) => {
       tool_call_id: tool_call.id,
       content: result.toString(),
     });
-    const completion2 = await generateCompletion(
+    const completionWithToolResult: OpenAI.Chat.Completions.ChatCompletion = await generateCompletion(
       messages,
       zodResponseFormat(schema, "produtos_schema")
     );
-    return completion2.choices[0].message.content;
+    return completionWithToolResult;
   }
+
+  return completion;
+};
+
+export const generateProducts = async (message: string) => {
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: "developer",
+      content:
+        "Liste no máximo três produtos que atendam a necessidade do usuário. Considere apenas os produtos em estoque.",
+    },
+    {
+      role: "user",
+      content: message,
+    },
+  ];
+
+  const completion = await generateCompletion(
+    messages,
+    zodResponseFormat(schema, "produtos_schema")
+  );
 
   return completion.choices[0].message.content;
 };
