@@ -63,24 +63,33 @@ const generateCompletion = async (
   }
 
   const { tool_calls } = completion.choices[0].message;
-  if (tool_calls) {
-    const [tool_call] = tool_calls;
+  if (tool_calls && tool_calls.length > 0) {
     const toolsMap = {
       produtos_em_estoque: produtosEmEstoque,
       produtos_em_falta: produtosEmFalta,
     };
-    const functionToCall =
-      toolsMap[tool_call.function.name as keyof typeof toolsMap];
-    if (!functionToCall) {
-      throw new Error('Function not found');
-    }
-    const result = functionToCall();
+
+    // Adicionar a mensagem do assistente com as tool calls
     messages.push(completion.choices[0].message);
-    messages.push({
-      role: 'tool',
-      tool_call_id: tool_call.id,
-      content: result.toString(),
-    });
+
+    // Processar todas as tool calls
+    for (const tool_call of tool_calls) {
+      const functionToCall =
+        toolsMap[tool_call.function.name as keyof typeof toolsMap];
+      if (!functionToCall) {
+        throw new Error(`Function not found: ${tool_call.function.name}`);
+      }
+      const result = functionToCall();
+
+      // Adicionar a resposta da tool call
+      messages.push({
+        role: 'tool',
+        tool_call_id: tool_call.id,
+        content: JSON.stringify(result),
+      });
+    }
+
+    // Fazer uma nova chamada com todas as respostas das tools
     const completionWithToolResult: OpenAI.Chat.Completions.ChatCompletion =
       await generateCompletion(
         messages,
