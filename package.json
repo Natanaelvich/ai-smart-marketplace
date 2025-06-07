@@ -11,7 +11,9 @@
     "lint": "eslint 'src/**/*.{js,ts}'",
     "lint:fix": "eslint 'src/**/*.{js,ts}' --fix",
     "format": "prettier --write 'src/**/*.{js,ts}' '*.{js,ts,json}'",
-    "format:check": "prettier --check 'src/**/*.{js,ts}' '*.{js,ts,json}'"
+    "format:check": "prettier --check 'src/**/*.{js,ts}' '*.{js,ts,json}'",
+    "test": "tsx tests/run-tests.ts",
+    "test:watch": "tsx watch tests/run-tests.ts"
   },
   "dependencies": {
     "dotenv": "^16.5.0",
