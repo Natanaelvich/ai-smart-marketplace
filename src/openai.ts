@@ -1,13 +1,13 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
-import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
+import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import {
   ChatCompletionMessageParam,
   ChatCompletionTool,
-} from "openai/resources";
-import { z } from "zod";
-import { produtosEmEstoque, produtosEmFalta } from "./database";
+} from 'openai/resources';
+import { z } from 'zod';
+import { produtosEmEstoque, produtosEmFalta } from './database';
 
 const schema = z.object({
   produtos: z.array(z.string()),
@@ -19,12 +19,12 @@ const client = new OpenAI({
 
 const tools: ChatCompletionTool[] = [
   {
-    type: "function",
+    type: 'function',
     function: {
-      name: "produtos_em_estoque",
-      description: "Lista os produtos que estão em estoque.",
+      name: 'produtos_em_estoque',
+      description: 'Lista os produtos que estão em estoque.',
       parameters: {
-        type: "object",
+        type: 'object',
         properties: {},
         additionalProperties: false,
       },
@@ -32,12 +32,12 @@ const tools: ChatCompletionTool[] = [
     },
   },
   {
-    type: "function",
+    type: 'function',
     function: {
-      name: "produtos_em_falta",
-      description: "Lista os produtos que estão em falta.",
+      name: 'produtos_em_falta',
+      description: 'Lista os produtos que estão em falta.',
       parameters: {
-        type: "object",
+        type: 'object',
         properties: {},
         additionalProperties: false,
       },
@@ -51,7 +51,7 @@ const generateCompletion = async (
   format: ReturnType<typeof zodResponseFormat<typeof schema>>
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> => {
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: 'gpt-4o-mini',
     max_tokens: 100,
     response_format: format,
     tools,
@@ -59,7 +59,7 @@ const generateCompletion = async (
   });
 
   if (completion.choices[0].message.refusal) {
-    throw new Error("Refusal");
+    throw new Error('Refusal');
   }
 
   const { tool_calls } = completion.choices[0].message;
@@ -69,21 +69,23 @@ const generateCompletion = async (
       produtos_em_estoque: produtosEmEstoque,
       produtos_em_falta: produtosEmFalta,
     };
-    const functionToCall = toolsMap[tool_call.function.name as keyof typeof toolsMap];
+    const functionToCall =
+      toolsMap[tool_call.function.name as keyof typeof toolsMap];
     if (!functionToCall) {
-      throw new Error("Function not found");
+      throw new Error('Function not found');
     }
     const result = functionToCall();
     messages.push(completion.choices[0].message);
     messages.push({
-      role: "tool",
+      role: 'tool',
       tool_call_id: tool_call.id,
       content: result.toString(),
     });
-    const completionWithToolResult: OpenAI.Chat.Completions.ChatCompletion = await generateCompletion(
-      messages,
-      zodResponseFormat(schema, "produtos_schema")
-    );
+    const completionWithToolResult: OpenAI.Chat.Completions.ChatCompletion =
+      await generateCompletion(
+        messages,
+        zodResponseFormat(schema, 'produtos_schema')
+      );
     return completionWithToolResult;
   }
 
@@ -93,19 +95,19 @@ const generateCompletion = async (
 export const generateProducts = async (message: string) => {
   const messages: ChatCompletionMessageParam[] = [
     {
-      role: "developer",
+      role: 'developer',
       content:
-        "Liste no máximo três produtos que atendam a necessidade do usuário. Considere apenas os produtos em estoque.",
+        'Liste no máximo três produtos que atendam a necessidade do usuário. Considere apenas os produtos em estoque.',
     },
     {
-      role: "user",
+      role: 'user',
       content: message,
     },
   ];
 
   const completion = await generateCompletion(
     messages,
-    zodResponseFormat(schema, "produtos_schema")
+    zodResponseFormat(schema, 'produtos_schema')
   );
 
   return completion.choices[0].message.content;
