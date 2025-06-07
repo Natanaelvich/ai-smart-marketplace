@@ -20,9 +20,9 @@ const produtos: {
   ];
   
   export const produtosEmEstoque = () => {
-    return produtos.filter((produto) => produto.estoque > 0);
+    return produtos.filter((produto) => produto.estoque > 0).map(p => p.nome);
   };
   
   export const produtosEmFalta = () => {
-    return produtos.filter((produto) => produto.estoque === 0);
+    return produtos.filter((produto) => produto.estoque === 0).map(p => p.nome);
   };
