@@ -29,6 +29,7 @@ Thumbs.db
 # Logs
 logs
 *.log
+tests/logs/
 
 # Runtime data
 pids
