@@ -1,6 +1,6 @@
 import express from 'express';
 import { embedProducts, generateEmbedding, generateProducts } from './openai';
-import { todosProdutos } from './database';
+import { produtosSimilares, todosProdutos } from './database';
 
 const app = express();
 app.use(express.json());
@@ -13,6 +13,17 @@ app.post('/generate', async (req, res) => {
     console.error(e);
     res.status(500).json({ error: 'Internal Server Error' });
   }
+});
+
+app.post('/cart', async (req, res) => {
+  const { message } = req.body;
+  const embedding = await generateEmbedding(message);
+  if (!embedding) {
+    res.status(500).json({ error: 'Embedding não gerada' });
+    return;
+  }
+  const produtos = produtosSimilares(embedding);
+  res.json(produtos.map(p => ({ nome: p.nome, similaridade: p.similaridade })));
 });
 
 app.post('/embeddings', async (req, res) => {
