@@ -190,3 +190,37 @@ export const createVector = async () => {
 
   console.dir(vectorStore, { depth: null });
 };
+
+export const createEmbeddingsBatchFile = async (products: string[]) => {
+  const content = products
+    .map((p, i) => ({
+      custom_id: i,
+      method: 'POST',
+      url: '/v1/embeddings',
+      body: {
+        input: p,
+        model: 'text-embedding-3-small',
+        encoding_format: 'float',
+      },
+    }))
+    .map(p => JSON.stringify(p))
+    .join('\n');
+
+  const file = new File([content], 'embeddings-batch.jsonl');
+  const uploaded = await client.files.create({
+    file,
+    purpose: 'batch',
+  });
+
+  return uploaded;
+};
+
+export const createEmbeddingsBatch = async (fileId: string) => {
+  const batch = await client.batches.create({
+    input_file_id: fileId,
+    endpoint: '/v1/embeddings',
+    completion_window: '24h',
+  });
+
+  return batch;
+};
