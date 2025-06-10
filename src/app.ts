@@ -8,8 +8,9 @@ import {
   createEmbeddingsBatchFile,
   getBatch,
   getFileContent,
+  processEmbeddingsBatchResult,
 } from './openai';
-import { produtosSimilares, todosProdutos } from './database';
+import { produtosSimilares, setarEmbedding, todosProdutos } from './database';
 
 const app = express();
 app.use(express.json());
@@ -62,19 +63,23 @@ app.post('/embeddings-batch', async (req, res) => {
 });
 
 app.post('/embeddings-batch/result', async (req, res) => {
-  const batch = await getBatch('batch_681cef110b348190ac52d60760584d26');
-
-  if (batch.status !== 'completed' || !batch.output_file_id) {
-    res.json(batch);
-    return;
-  }
-
-  console.log('TODO: process results', batch.output_file_id);
-
-  const file = await getFileContent(batch.output_file_id);
-  console.log(file);
-
-  res.json(batch);
+    const result = await processEmbeddingsBatchResult('batch_681cef110b348190ac52d60760584d26');Add commentMore actions
+    if (!result){
+      res.status(200).json({ message: 'Still processing' });
+      return
+  
+    }
+  
+    result.forEach(r => setarEmbedding(r.id, r.embeddings))
+  
+    res.status(201).end();
 });
+
+app.get('/products', async (req, res) => {
+    res.json(todosProdutos().map(p => ({
+      ...p,
+      embedding: p.embedding ? p.embedding.slice(0, 3) : null
+    })));
+  });
 
 export default app;

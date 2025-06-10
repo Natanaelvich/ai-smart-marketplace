@@ -234,3 +234,30 @@ export const getFileContent = async (id: string) => {
 
   return response.text();
 };
+
+export const processEmbeddingsBatchResult = async (batchId: string) => {
+  const batch = await getBatch(batchId);
+  if (batch.status !== 'completed' || !batch.output_file_id) {
+    return null;
+  }
+
+  const content = await getFileContent(batch.output_file_id);
+  return content
+    .split('\n')
+    .map(line => {
+      try {
+        const parsed = JSON.parse(line) as {
+          custom_id: string;
+          response: { body: { data: { embedding: number[] }[] } };
+        };
+        return {
+          id: Number(parsed.custom_id),
+          embeddings: parsed.response.body.data[0].embedding,
+        };
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
+    })
+    .filter((r): r is { id: number; embeddings: number[] } => Boolean(r));
+};
