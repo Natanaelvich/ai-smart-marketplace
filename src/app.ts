@@ -4,6 +4,8 @@ import {
   generateCart,
   generateEmbedding,
   generateProducts,
+  createEmbeddingsBatch,
+  createEmbeddingsBatchFile,
 } from './openai';
 import { produtosSimilares, todosProdutos } from './database';
 
@@ -49,6 +51,12 @@ app.post('/response', async (req, res) => {
   const cart = await generateCart(input, ['feijão', 'detergente']);
 
   res.json(cart);
+});
+
+app.post('/embeddings-batch', async (req, res) => {
+  const file = await createEmbeddingsBatchFile(['sorvete', 'alface']);
+  const batch = await createEmbeddingsBatch(file.id);
+  res.json(batch);
 });
 
 export default app;
