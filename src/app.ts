@@ -6,6 +6,8 @@ import {
   generateProducts,
   createEmbeddingsBatch,
   createEmbeddingsBatchFile,
+  getBatch,
+  getFileContent,
 } from './openai';
 import { produtosSimilares, todosProdutos } from './database';
 
@@ -56,6 +58,22 @@ app.post('/response', async (req, res) => {
 app.post('/embeddings-batch', async (req, res) => {
   const file = await createEmbeddingsBatchFile(['sorvete', 'alface']);
   const batch = await createEmbeddingsBatch(file.id);
+  res.json(batch);
+});
+
+app.post('/embeddings-batch/result', async (req, res) => {
+  const batch = await getBatch('batch_681cef110b348190ac52d60760584d26');
+
+  if (batch.status !== 'completed' || !batch.output_file_id) {
+    res.json(batch);
+    return;
+  }
+
+  console.log('TODO: process results', batch.output_file_id);
+
+  const file = await getFileContent(batch.output_file_id);
+  console.log(file);
+
   res.json(batch);
 });
 
