@@ -8,7 +8,7 @@ import {
   createEmbeddingsBatchFile,
   processEmbeddingsBatchResult,
 } from './openai';
-import { produtosSimilares, setarEmbedding, todosProdutos } from './database';
+import { setarEmbedding, todosProdutos } from './database';
 
 const app = express();
 app.use(express.json());
@@ -24,14 +24,14 @@ app.post('/generate', async (req, res) => {
 });
 
 app.post('/cart', async (req, res) => {
-  const { message } = req.body;
-  const embedding = await generateEmbedding(message);
-  if (!embedding) {
-    res.status(500).json({ error: 'Embedding não gerada' });
-    return;
-  }
-  const produtos = produtosSimilares(embedding);
-  res.json(produtos.map(p => ({ nome: p.nome, similaridade: p.similaridade })));
+  const { input } = req.body;
+
+  const cart = await generateCart(
+    input,
+    todosProdutos().map(p => p.nome)
+  );
+
+  res.json(cart);
 });
 
 app.post('/embeddings', async (req, res) => {
