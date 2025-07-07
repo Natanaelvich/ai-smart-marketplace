@@ -1,100 +1,168 @@
 # 🤖 Smart Marketplace AI Study
 
-AI-powered smart marketplace study project built with Node.js, TypeScript and OpenAI - Learning project for AI + Node development course.
+Intelligent marketplace developed as a study project to explore AI integration with modern web technologies. Fullstack system with semantic search, product catalog, and intelligent recommendations.
+
+## 🏗️ Architecture
+
+**Containerized Fullstack Application**
+- **Backend**: REST API with NestJS + TypeScript
+- **Frontend**: Modern interface with Next.js + TypeScript
+- **Database**: PostgreSQL with pgvector extension for embeddings
+- **Orchestration**: Docker Compose for development environment
 
 ## 🚀 Features
 
-- **AI Integration**: OpenAI GPT integration for intelligent marketplace features
-- **TypeScript**: Full TypeScript support with strict type checking
-- **Modern Node.js**: Latest Node.js features and best practices
-- **Environment Configuration**: Secure environment variable management
+- **Product Catalog**: Product and store management
+- **Semantic Search**: Integration with vector embeddings (pgvector)
+- **REST API**: CRUD operation endpoints
+- **Modern Interface**: Responsive UI with Tailwind CSS and Radix UI
+- **Type Safety**: TypeScript across the entire stack
 
 ## 📋 Prerequisites
 
-- Node.js (v18 or higher)
-- Yarn package manager
-- OpenAI API key
+- Docker and Docker Compose
+- Node.js 18+ (for local development)
+- npm or yarn
 
-## 🛠️ Installation
+## 🛠️ Installation and Setup
 
-1. Clone the repository:
+### 1. Clone the repository
 ```bash
 git clone https://github.com/yourusername/smart-marketplace-ai-study.git
 cd smart-marketplace-ai-study
 ```
 
-2. Install dependencies:
+### 2. Initialize the database
 ```bash
-yarn install
+# Start PostgreSQL with pgvector
+docker-compose up -d
+
+# Import initial data (optional)
+docker exec -i $(docker-compose ps -q db) psql -U postgres -d postgres < database/dump.sql
 ```
 
-3. Set up environment variables:
+### 3. Run the Backend
 ```bash
-cp .env.example .env
+cd backend
+npm install
+npm run start:dev
 ```
 
-4. Add your OpenAI API key to the `.env` file:
-```
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-## 🏃‍♂️ Running the Project
-
-### Development Mode
+### 4. Run the Frontend
 ```bash
-yarn dev
-```
-
-### Build and Run
-```bash
-yarn build
-yarn start
-```
-
-### Type Checking
-```bash
-yarn type-check
+cd frontend
+npm install
+npm run dev
 ```
 
 ## 📁 Project Structure
 
 ```
 smart-marketplace-ai-study/
-├── src/
-│   └── index.ts          # Main application file
-├── dist/                 # Compiled JavaScript output
-├── .env.example          # Environment variables template
-├── .gitignore           # Git ignore rules
-├── package.json         # Project dependencies and scripts
-├── tsconfig.json        # TypeScript configuration
-└── README.md           # Project documentation
+├── backend/                    # NestJS API
+│   ├── src/
+│   │   ├── app.module.ts      # Main module
+│   │   ├── catalog/           # Catalog module
+│   │   │   ├── catalog.controller.ts
+│   │   │   ├── catalog.service.ts
+│   │   │   └── catalog.module.ts
+│   │   ├── shared/            # Shared services
+│   │   │   └── postgres.service.ts
+│   │   └── main.ts            # Application bootstrap
+│   ├── test/                  # E2E tests
+│   └── package.json           # Backend dependencies
+├── frontend/                   # Next.js interface
+│   ├── src/
+│   │   ├── app/               # Next.js App Router
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   ├── components/        # React components
+│   │   │   └── ui/            # Base components (shadcn/ui)
+│   │   └── lib/               # Utilities
+│   └── package.json           # Frontend dependencies
+├── database/
+│   └── dump.sql               # Schema and initial data
+├── docker-compose.yml         # Container orchestration
+└── README.md                  # Documentation
 ```
 
-## 🧠 Learning Objectives
+## 🔧 Technology Stack
 
-This project is designed to explore:
+### Backend
+- **NestJS**: Enterprise-grade Node.js framework
+- **TypeScript**: Static typing
+- **PostgreSQL**: Relational database
+- **pgvector**: Extension for vectors/embeddings
+- **Docker**: Containerization
 
-- OpenAI API integration with Node.js
-- TypeScript development best practices
-- AI-powered e-commerce features
-- Intelligent product recommendations
-- Natural language processing for marketplace search
-- Automated content generation
+### Frontend
+- **Next.js 15**: React framework with App Router
+- **TypeScript**: Static typing
+- **Tailwind CSS**: Utility-first CSS framework
+- **Radix UI**: Accessible components
+- **Lucide React**: Icons
 
-## 🔧 Technologies Used
+### DevOps & Tools
+- **Docker Compose**: Local orchestration
+- **ESLint**: Code linting
+- **Prettier**: Code formatting
+- **Jest**: Unit and E2E testing
 
-- **Node.js** - JavaScript runtime
-- **TypeScript** - Type-safe JavaScript
-- **OpenAI** - AI/ML API for intelligent features
-- **dotenv** - Environment variable management
+## 🧠 Concepts Explored
 
-## 📚 Course Context
+### Artificial Intelligence
+- **Vector Embeddings**: Numerical representation of data
+- **Semantic Search**: Similarity-based search
+- **pgvector**: Vector operations in PostgreSQL
 
-This project is part of the "IA + Node: Marketplace Inteligente" course, focusing on building intelligent e-commerce solutions using artificial intelligence and modern web technologies.
+### Modern Architecture
+- **API First**: API-driven development
+- **Microservices**: Separation of concerns
+- **Containerization**: Isolation and portability
+- **Type Safety**: Typing across the entire stack
+
+## 🌐 API Endpoints
+
+```
+GET  /catalog/products    # List products
+GET  /catalog/stores      # List stores
+POST /catalog/search      # Semantic search
+```
+
+## 📊 Data Model
+
+```sql
+-- Stores
+stores (id, name)
+
+-- Products with embeddings
+products (id, name, price, store_id, embedding)
+```
+
+## 🧪 Testing
+
+```bash
+# Backend - E2E Tests
+cd backend
+npm run test:e2e
+
+# Frontend - Linting
+cd frontend
+npm run lint
+```
+
+## 📚 Learning Objectives
+
+- AI integration with web applications
+- Modern fullstack development
+- Microservices architecture
+- Vector operations in databases
+- TypeScript best practices
+- Containerization with Docker
 
 ## 🤝 Contributing
 
-This is a study project, but feel free to fork and experiment with your own ideas!
+Study project - feel free to fork and experiment!
 
 ## 📄 License
 
