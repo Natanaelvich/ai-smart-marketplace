@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { DatabaseService } from '../shared/database.service';
 import { carts, cartItems, products } from '../shared/schema';
 
@@ -93,6 +93,82 @@ export class CartService {
       return null;
     }
 
-    return cart[0];
+    const cartData = cart[0];
+    // Buscar itens do carrinho
+    const items = await this.databaseService.db
+      .select()
+      .from(cartItems)
+      .where(eq(cartItems.cartId, cartData.id));
+
+    return { ...cartData, items };
+  }
+
+  async updateCartItemQuantity(
+    userId: number,
+    productId: number,
+    quantity: number,
+  ) {
+    // Buscar carrinho ativo do usuário
+    const cart = await this.databaseService.db
+      .select()
+      .from(carts)
+      .where(and(eq(carts.userId, userId), eq(carts.active, true)))
+      .limit(1);
+
+    if (cart.length === 0) {
+      throw new NotFoundException('Active cart not found');
+    }
+
+    const cartId = cart[0].id;
+
+    // Buscar item do carrinho
+    const item = await this.databaseService.db
+      .select()
+      .from(cartItems)
+      .where(
+        and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+      )
+      .limit(1);
+
+    if (item.length === 0) {
+      throw new NotFoundException('Cart item not found');
+    }
+
+    if (quantity === 0) {
+      // Remover item do carrinho
+      await this.databaseService.db
+        .delete(cartItems)
+        .where(eq(cartItems.id, item[0].id));
+      return { id: item[0].id, action: 'deleted' };
+    } else {
+      // Atualizar quantidade
+      await this.databaseService.db
+        .update(cartItems)
+        .set({ quantity })
+        .where(eq(cartItems.id, item[0].id));
+      return { id: item[0].id, action: 'updated' };
+    }
+  }
+
+  async clearAllCartsForUser(userId: number) {
+    // Busca todos os carrinhos do usuário
+    const userCarts = await this.databaseService.db
+      .select()
+      .from(carts)
+      .where(eq(carts.userId, userId));
+
+    const cartIds = userCarts.map((c) => c.id);
+
+    console.log('cartIds', cartIds);
+    if (cartIds.length > 0) {
+      // Remove todos os itens desses carrinhos
+      await this.databaseService.db
+        .delete(cartItems)
+        .where(inArray(cartItems.cartId, cartIds));
+      // Remove os carrinhos
+      await this.databaseService.db
+        .delete(carts)
+        .where(inArray(carts.id, cartIds));
+    }
   }
 }
