@@ -31,6 +31,31 @@
 $ npm install
 ```
 
+## Database Setup
+
+O projeto utiliza **Drizzle ORM** para gerenciamento type-safe do banco de dados PostgreSQL.
+
+### Setup inicial (primeira vez)
+```bash
+# 1. Inicie o PostgreSQL via Docker
+$ cd .. && docker compose up -d
+
+# 2. Configure o banco (migrations + seed)
+$ npm run db:setup
+```
+
+### Scripts de banco disponíveis
+```bash
+$ npm run db:setup      # Setup completo (migrations + seed)
+$ npm run db:reset      # Reset completo do banco
+$ npm run db:seed       # Apenas seed dos dados
+$ npm run db:studio     # Interface visual do banco
+$ npm run db:generate   # Gerar nova migration
+$ npm run db:migrate    # Aplicar migrations
+```
+
+📖 **Documentação completa**: [DATABASE.md](./DATABASE.md)
+
 ## Compile and run the project
 
 ```bash
