@@ -1,9 +1,16 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'pg';
 
 @Injectable()
-export class PostgresService implements OnApplicationBootstrap {
+export class PostgresService
+  implements OnApplicationBootstrap, OnApplicationShutdown
+{
   client: Client;
   logger = new Logger(PostgresService.name);
 
@@ -22,5 +29,12 @@ export class PostgresService implements OnApplicationBootstrap {
       .connect()
       .then(() => this.logger.log('Postgres connected successfully'))
       .catch((err) => this.logger.error('Postgres connection error', err));
+  }
+
+  onApplicationShutdown() {
+    return this.client
+      .end()
+      .then(() => this.logger.log('Postgres disconnected successfully'))
+      .catch((err) => this.logger.error('Postgres disconnection error', err));
   }
 }
