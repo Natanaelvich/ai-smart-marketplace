@@ -10,5 +10,6 @@ export default {
     user: process.env.POSTGRES_USER || 'postgres',
     password: process.env.POSTGRES_PASSWORD || 'password',
     database: process.env.POSTGRES_DB || 'smart_marketplace',
+    ssl: false, // Explicitly disable SSL to avoid "The server does not support SSL connections" error
   },
 } satisfies Config;
