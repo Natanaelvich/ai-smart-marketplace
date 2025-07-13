@@ -8,6 +8,13 @@
       "when": 1752417723203,
       "tag": "0000_simple_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1752418166918,
+      "tag": "0001_workable_mysterio",
+      "breakpoints": true
     }
   ]
 }
