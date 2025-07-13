@@ -22,7 +22,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "db:introspect": "drizzle-kit introspect"
+    "db:introspect": "drizzle-kit introspect",
+    "db:seed": "tsx src/shared/seeds.ts",
+    "db:setup": "tsx scripts/migrate-and-seed.ts",
+    "db:reset": "npm run db:setup"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,7 +36,8 @@
     "drizzle-orm": "^0.44.2",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "tsx": "^4.20.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
