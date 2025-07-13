@@ -185,7 +185,6 @@ export class CartService {
 
     const cartIds = userCarts.map((c) => c.id);
 
-    console.log('cartIds', cartIds);
     if (cartIds.length > 0) {
       // Remove todos os itens desses carrinhos
       await this.databaseService.db
