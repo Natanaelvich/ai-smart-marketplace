@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { stores, products } from './schema';
+import { stores, products, users, carts, cartItems } from './schema';
 
 const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
@@ -17,7 +17,10 @@ async function seed() {
 
   try {
     // Limpar dados existentes (opcional - para desenvolvimento)
+    await db.delete(cartItems);
+    await db.delete(carts);
     await db.delete(products);
+    await db.delete(users);
     await db.delete(stores);
 
     // Inserir lojas
@@ -32,6 +35,31 @@ async function seed() {
       .returning();
 
     console.log(`✅ Inserted ${insertedStores.length} stores`);
+
+    // Inserir usuários
+    console.log('👥 Seeding users...');
+    const insertedUsers = await db
+      .insert(users)
+      .values([
+        {
+          name: 'John Doe',
+          email: 'johndoe@email.com',
+          password: 'dummyhash',
+        },
+        {
+          name: 'Maria Silva',
+          email: 'maria.silva@email.com',
+          password: 'dummyhash',
+        },
+        {
+          name: 'Pedro Santos',
+          email: 'pedro.santos@email.com',
+          password: 'dummyhash',
+        },
+      ])
+      .returning();
+
+    console.log(`✅ Inserted ${insertedUsers.length} users`);
 
     // Inserir produtos
     console.log('🛒 Seeding products...');
@@ -189,6 +217,84 @@ async function seed() {
       .returning();
 
     console.log(`✅ Inserted ${insertedProducts.length} products`);
+
+    // Inserir carrinhos de exemplo
+    console.log('🛒 Seeding carts...');
+    const insertedCarts = await db
+      .insert(carts)
+      .values([
+        {
+          userId: insertedUsers[0].id, // John Doe
+          storeId: insertedStores[0].id, // Supermercado Central
+          active: true,
+        },
+        {
+          userId: insertedUsers[1].id, // Maria Silva
+          storeId: insertedStores[1].id, // Mercado Econômico
+          active: true,
+        },
+        {
+          userId: insertedUsers[2].id, // Pedro Santos
+          storeId: insertedStores[2].id, // SuperShop Express
+          active: false, // Carrinho inativo
+        },
+      ])
+      .returning();
+
+    console.log(`✅ Inserted ${insertedCarts.length} carts`);
+
+    // Inserir itens no carrinho de exemplo
+    console.log('📋 Seeding cart items...');
+
+    // Helper para encontrar produto de forma segura
+    const findProduct = (name: string, storeId: number) => {
+      const product = insertedProducts.find(
+        (p) => p.name === name && p.storeId === storeId,
+      );
+      if (!product) {
+        throw new Error(`Product "${name}" not found for store ${storeId}`);
+      }
+      return product;
+    };
+
+    const cartItemsData = [
+      // Carrinho do John Doe (Supermercado Central)
+      {
+        cartId: insertedCarts[0].id,
+        productId: findProduct('Feijão preto - 1kg', insertedStores[0].id).id,
+        quantity: 2,
+      },
+      {
+        cartId: insertedCarts[0].id,
+        productId: findProduct('Arroz branco - 1kg', insertedStores[0].id).id,
+        quantity: 1,
+      },
+      {
+        cartId: insertedCarts[0].id,
+        productId: findProduct('Peito de frango - 1kg', insertedStores[0].id)
+          .id,
+        quantity: 1,
+      },
+
+      // Carrinho da Maria Silva (Mercado Econômico)
+      {
+        cartId: insertedCarts[1].id,
+        productId: findProduct('Feijão preto - 1kg', insertedStores[1].id).id,
+        quantity: 1,
+      },
+      {
+        cartId: insertedCarts[1].id,
+        productId: findProduct('Ovos - dúzia', insertedStores[1].id).id,
+        quantity: 2,
+      },
+    ];
+
+    const insertedCartItems = await db
+      .insert(cartItems)
+      .values(cartItemsData)
+      .returning();
+
+    console.log(`✅ Inserted ${insertedCartItems.length} cart items`);
     console.log('🎉 Seed completed successfully!');
   } catch (error) {
     console.error('❌ Seed failed:', error);
