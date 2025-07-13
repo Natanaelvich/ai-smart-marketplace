@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { eq, and, inArray } from 'drizzle-orm';
 import { DatabaseService } from '../shared/database.service';
-import { carts, cartItems, products } from '../shared/schema';
+import { carts, cartItems, products, stores } from '../shared/schema';
 
 @Injectable()
 export class CartService {
@@ -82,25 +82,51 @@ export class CartService {
   }
 
   async getCart(userId: number) {
-    // Buscar carrinho ativo simples
-    const cart = await this.databaseService.db
-      .select()
+    // Buscar carrinho ativo simples + nome da loja
+    const cartWithStore = await this.databaseService.db
+      .select({
+        id: carts.id,
+        userId: carts.userId,
+        storeId: carts.storeId,
+        active: carts.active,
+        createdAt: carts.createdAt,
+        store: {
+          id: stores.id,
+          name: stores.name,
+        },
+      })
       .from(carts)
+      .leftJoin(stores, eq(carts.storeId, stores.id))
       .where(and(eq(carts.userId, userId), eq(carts.active, true)))
       .limit(1);
 
-    if (cart.length === 0) {
+    if (cartWithStore.length === 0) {
       return null;
     }
 
-    const cartData = cart[0];
+    const cartData = cartWithStore[0];
     // Buscar itens do carrinho
     const items = await this.databaseService.db
-      .select()
+      .select({
+        id: cartItems.id,
+        cartId: cartItems.cartId,
+        productId: cartItems.productId,
+        quantity: cartItems.quantity,
+        createdAt: cartItems.createdAt,
+        // Buscar preço do produto
+        price: products.price,
+      })
       .from(cartItems)
+      .leftJoin(products, eq(cartItems.productId, products.id))
       .where(eq(cartItems.cartId, cartData.id));
 
-    return { ...cartData, items };
+    // Calcular total
+    const total = items.reduce(
+      (acc, item) => acc + (item.price ?? 0) * item.quantity,
+      0,
+    );
+
+    return { ...cartData, items, total };
   }
 
   async updateCartItemQuantity(
