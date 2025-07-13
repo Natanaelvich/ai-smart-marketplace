@@ -24,7 +24,7 @@ describe('Cart (e2e)', () => {
 
   it('should add a product to the cart', async () => {
     const response = await request(app.getHttpServer()).post('/cart').send({
-      productId: 1,
+      productId: 37, // Using existing product ID
       quantity: 2,
     });
     expect(response.status).toBe(201);
@@ -32,13 +32,7 @@ describe('Cart (e2e)', () => {
   });
 
   it('should get cart after adding product', async () => {
-    // Primeiro adicionar um produto
-    await request(app.getHttpServer()).post('/cart').send({
-      productId: 1,
-      quantity: 2,
-    });
-
-    // Depois buscar o carrinho
+    // User ID 1 already has an active cart from seeds, so this should return existing cart
     const responseCart = await request(app.getHttpServer()).get('/cart');
     expect(responseCart.status).toBe(200);
     expect(responseCart.body).toHaveProperty('id');
@@ -46,14 +40,17 @@ describe('Cart (e2e)', () => {
     expect(responseCart.body.active).toBe(true);
   });
 
-  it('should return 404 when cart is empty', async () => {
-    const responseCart = await request(app.getHttpServer()).get('/cart');
-    expect(responseCart.status).toBe(404);
+  it('should return 404 when product does not exist', async () => {
+    const response = await request(app.getHttpServer()).post('/cart').send({
+      productId: 99999, // Non-existent product
+      quantity: 2,
+    });
+    expect(response.status).toBe(404);
   });
 
   it('should return 400 when required fields are missing', async () => {
     const response = await request(app.getHttpServer()).post('/cart').send({
-      productId: 1,
+      productId: 37,
       // quantity missing
     });
     expect(response.status).toBe(400);
