@@ -15,6 +15,13 @@
       "when": 1752418166918,
       "tag": "0001_workable_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1752524806259,
+      "tag": "0002_fearless_mephisto",
+      "breakpoints": true
     }
   ]
 }
