@@ -1,22 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService } from '../shared/postgres.service';
+import { DatabaseService } from '../shared/database.service';
+import { chatSessions } from '../shared/schema';
+import { eq } from 'drizzle-orm';
+
 @Injectable()
 export class ChatService {
-  constructor(private readonly postgresService: PostgresService) {}
+  constructor(private readonly databaseService: DatabaseService) {}
   async createChatSession(userId: number) {
-    const result = await this.postgresService.client.query<{
-      id: number;
-    }>('INSERT INTO chat_sessions (user_id) VALUES ($1) RETURNING id', [
-      userId,
-    ]);
-    return result.rows[0];
+    const result = await this.databaseService.db
+      .insert(chatSessions)
+      .values({ userId })
+      .returning({ id: chatSessions.id });
+    return result[0];
   }
   async getChatSession(sessionId: number) {
-    const result = await this.postgresService.client.query<{
-      id: number;
-      created_at: Date;
-      user_id: number;
-    }>('SELECT * FROM chat_sessions WHERE id = $1', [sessionId]);
-    return result.rows[0];
+    const result = await this.databaseService.db
+      .select()
+      .from(chatSessions)
+      .where(eq(chatSessions.id, sessionId))
+      .limit(1);
+    return result[0];
   }
 }

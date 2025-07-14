@@ -63,6 +63,12 @@ export const cartItems = pgTable(
   }),
 );
 
+export const chatSessions = pgTable('chat_sessions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Define relations
 export const storesRelations = relations(stores, ({ many }) => ({
   products: many(products),
@@ -79,6 +85,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   carts: many(carts),
+  chatSessions: many(chatSessions),
 }));
 
 export const cartsRelations = relations(carts, ({ one, many }) => ({
@@ -104,6 +111,13 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   }),
 }));
 
+export const chatSessionsRelations = relations(chatSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [chatSessions.userId],
+    references: [users.id],
+  }),
+}));
+
 // Export types
 export type Store = typeof stores.$inferSelect;
 export type NewStore = typeof stores.$inferInsert;
@@ -115,3 +129,5 @@ export type Cart = typeof carts.$inferSelect;
 export type NewCart = typeof carts.$inferInsert;
 export type CartItem = typeof cartItems.$inferSelect;
 export type NewCartItem = typeof cartItems.$inferInsert;
+export type ChatSession = typeof chatSessions.$inferSelect;
+export type NewChatSession = typeof chatSessions.$inferInsert;
