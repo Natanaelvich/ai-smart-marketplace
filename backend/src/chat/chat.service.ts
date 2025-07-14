@@ -1,11 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadGatewayException } from '@nestjs/common';
 import { DatabaseService } from '../shared/database.service';
-import { chatSessions, chatMessages } from '../shared/schema';
-import { eq } from 'drizzle-orm';
+import {
+  chatSessions,
+  chatMessages,
+  chatMessagesActions,
+  ChatMessageAction,
+} from '../shared/schema';
+import { eq, inArray, and } from 'drizzle-orm';
+import { LlmService } from '../shared/llm.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly llmService: LlmService,
+  ) {}
+
   async createChatSession(userId: number) {
     const result = await this.databaseService.db
       .insert(chatSessions)
@@ -13,8 +23,8 @@ export class ChatService {
       .returning({ id: chatSessions.id });
     return result[0];
   }
+
   async getChatSession(sessionId: number) {
-    // Buscar a sessão
     const sessionArr = await this.databaseService.db
       .select()
       .from(chatSessions)
@@ -29,14 +39,76 @@ export class ChatService {
       .select()
       .from(chatMessages)
       .where(eq(chatMessages.chatSessionId, sessionId));
+    // Buscar ações relacionadas às mensagens
+    const messageIds = messages.map((m) => m.id);
+    let actions: ChatMessageAction[] = [];
+    if (messageIds.length > 0) {
+      actions = await this.databaseService.db
+        .select()
+        .from(chatMessagesActions)
+        .where(inArray(chatMessagesActions.chatMessageId, messageIds));
+    }
+    // Agregar action em cada mensagem
+    const messagesWithAction = messages.map((msg) => ({
+      ...msg,
+      action: actions.find((a) => a.chatMessageId === msg.id) || null,
+    }));
     return {
       ...session,
-      messages,
+      messages: messagesWithAction,
     };
   }
 
   async addUserMessage(sessionId: number, content: string) {
-    return this.addMessageToSession(sessionId, content, 'user');
+    // Buscar o último openaiMessageId do assistente
+    const lastAssistantMsg = await this.databaseService.db
+      .select({ openaiMessageId: chatMessages.openaiMessageId })
+      .from(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.chatSessionId, sessionId),
+          eq(chatMessages.sender, 'assistant'),
+        ),
+      )
+      .orderBy(chatMessages.createdAt)
+      .limit(1);
+    const previousMessageId =
+      lastAssistantMsg.length > 0 ? lastAssistantMsg[0].openaiMessageId : null;
+
+    const userMessage = await this.addMessageToSession(
+      sessionId,
+      content,
+      'user',
+    );
+    const llmResponse = (await this.llmService.answerMessage(
+      content,
+      previousMessageId,
+    )) as {
+      message: string;
+      action: { type: string; payload?: unknown };
+      responseId: string;
+    } | null;
+    if (!llmResponse) {
+      throw new BadGatewayException('Failed to get a response from LLM');
+    }
+    const llmMessage = await this.addMessageToSession(
+      sessionId,
+      llmResponse.message,
+      'assistant',
+      llmResponse.responseId,
+      'text',
+    );
+    if (llmResponse.action.type === 'suggest_carts') {
+      await this.databaseService.db
+        .insert(chatMessagesActions)
+        .values({
+          chatMessageId: llmMessage.id,
+          actionType: llmResponse.action.type,
+          payload: llmResponse.action.payload as object,
+        })
+        .onConflictDoNothing();
+    }
+    return userMessage;
   }
 
   private async addMessageToSession(
