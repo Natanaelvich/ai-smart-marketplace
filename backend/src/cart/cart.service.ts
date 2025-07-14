@@ -19,7 +19,7 @@ export class CartService {
       throw new NotFoundException('Product not found');
     }
 
-    const storeId = product[0].storeId!;
+    const storeId = product[0].storeId;
 
     // Buscar ou criar carrinho ativo para o usuário nesta loja
     let cart = await this.databaseService.db
