@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { DatabaseService } from '../src/shared/database.service';
-import { chatSessions } from '../src/shared/schema';
+import { chatSessions, chatMessages } from '../src/shared/schema';
 
 describe('Chat (e2e)', () => {
   let app: INestApplication;
@@ -17,6 +17,7 @@ describe('Chat (e2e)', () => {
     app.enableShutdownHooks();
     await app.init();
     dbService = moduleFixture.get<DatabaseService>(DatabaseService);
+    await dbService.db.delete(chatMessages);
     await dbService.db.delete(chatSessions);
   });
 
@@ -36,5 +37,18 @@ describe('Chat (e2e)', () => {
     const getBody = getResponse.body as { id: number; createdAt: string };
     expect(getBody).toHaveProperty('id', postBody.id);
     expect(getBody).toHaveProperty('createdAt');
+  });
+
+  it('should add new messages to chat session', async () => {
+    const postResponse = await request(app.getHttpServer()).post('/chat');
+    expect(postResponse.status).toBe(201);
+    const sessionId = (postResponse.body as { id: number }).id;
+    const messageResponse = await request(app.getHttpServer())
+      .post(`/chat/${sessionId}/messages`)
+      .send({ content: 'Hello, world!' });
+    expect(messageResponse.status).toBe(201);
+    const messageBody = messageResponse.body as { id: number; content: string };
+    expect(messageBody).toHaveProperty('id');
+    expect(messageBody).toHaveProperty('content', 'Hello, world!');
   });
 });

@@ -7,6 +7,7 @@ import {
   timestamp,
   boolean,
   unique,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -68,6 +69,37 @@ export const chatSessions = pgTable('chat_sessions', {
   userId: integer('user_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const chatMessages = pgTable('chat_messages', {
+  id: serial('id').primaryKey(),
+  chatSessionId: integer('chat_session_id').references(() => chatSessions.id),
+  content: varchar('content', { length: 1000 }).notNull(),
+  sender: varchar('sender', { length: 50 }).notNull(), // 'user' | 'assistant'
+  openaiMessageId: varchar('openai_message_id', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  messageType: varchar('message_type', { length: 50 })
+    .notNull()
+    .default('text'), // 'text' | 'suggest_carts_result'
+});
+
+export const chatMessagesActions = pgTable(
+  'chat_messages_actions',
+  {
+    id: serial('id').primaryKey(),
+    chatMessageId: integer('chat_message_id').references(() => chatMessages.id),
+    actionType: varchar('action_type', { length: 50 }).notNull(), // 'suggest_carts'
+    payload: jsonb('payload').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    confirmedAt: timestamp('confirmed_at'),
+    executedAt: timestamp('executed_at'),
+  },
+  (table) => ({
+    uniqueAction: unique('unique_chat_message_action').on(
+      table.chatMessageId,
+      table.actionType,
+    ),
+  }),
+);
 
 // Define relations
 export const storesRelations = relations(stores, ({ many }) => ({
@@ -131,3 +163,7 @@ export type CartItem = typeof cartItems.$inferSelect;
 export type NewCartItem = typeof cartItems.$inferInsert;
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type NewChatSession = typeof chatSessions.$inferInsert;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;
+export type ChatMessageAction = typeof chatMessagesActions.$inferSelect;
+export type NewChatMessageAction = typeof chatMessagesActions.$inferInsert;
