@@ -22,6 +22,20 @@
       "when": 1752524806259,
       "tag": "0002_fearless_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1752525521848,
+      "tag": "0003_worried_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1752526144793,
+      "tag": "0004_living_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }
