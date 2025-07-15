@@ -36,6 +36,13 @@
       "when": 1752526144793,
       "tag": "0004_living_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1752613980213,
+      "tag": "0005_nostalgic_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

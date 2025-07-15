@@ -45,6 +45,10 @@ export const carts = pgTable('carts', {
   storeId: integer('store_id').references(() => stores.id),
   active: boolean('active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
+  score: integer('score'),
+  suggestedByMessageId: integer('suggested_by_message_id').references(
+    () => chatMessages.id,
+  ),
 });
 
 export const cartItems = pgTable(
