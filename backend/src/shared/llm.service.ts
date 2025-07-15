@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import z from 'zod';
-import { zodTextFormat } from 'openai/helpers/zod';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const answerMessageSchema = z.object({
   message: z.string(),
@@ -18,6 +18,14 @@ const answerMessageSchema = z.object({
     }),
   ]),
 });
+const answerMessageJsonSchemaFull = zodToJsonSchema(
+  answerMessageSchema,
+  'answerSchema',
+);
+const answerMessageJsonSchema = {
+  name: 'answerSchema',
+  schema: answerMessageJsonSchemaFull.definitions.answerSchema,
+};
 type AnswerMessage = z.infer<typeof answerMessageSchema>;
 
 @Injectable()
@@ -40,28 +48,39 @@ export class LlmService {
   }
   async answerMessage(
     message: string,
-    previousMessageId: string | null = null,
   ): Promise<(AnswerMessage & { responseId: string }) | null> {
     try {
-      const response = await this.client.responses.parse({
-        model: 'gpt-4.1-nano',
-        instructions: LlmService.ANSWER_MESSAGE_PROMPT,
-        input: message,
-        ...(previousMessageId
-          ? { previous_response_id: previousMessageId }
-          : {}),
-        text: {
-          format: zodTextFormat(answerMessageSchema, 'answerSchema'),
+      const response = await this.client.chat.completions.parse({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: LlmService.ANSWER_MESSAGE_PROMPT,
+          },
+          {
+            role: 'user',
+            content: message,
+          },
+        ],
+        response_format: {
+          type: 'json_schema',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          json_schema: answerMessageJsonSchema as any,
         },
       });
-      if (!response.output_parsed) {
+      if (
+        !response.choices[0]?.message?.parsed ||
+        typeof response.choices[0].message.parsed !== 'object'
+      ) {
         return null;
       }
+
       return {
-        ...response.output_parsed,
+        ...(response.choices[0].message.parsed as Record<string, unknown>),
         responseId: response.id,
       };
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       return null;
     }
   }
