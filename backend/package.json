@@ -34,12 +34,13 @@
     "@nestjs/platform-express": "^11.0.1",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.2",
+    "openai": "^5.8.2",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tsx": "^4.20.3",
-    "openai": "^5.8.2",
-    "zod": "^3.25.71"
+    "zod": "^3.25.71",
+    "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
