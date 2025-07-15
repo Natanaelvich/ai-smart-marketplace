@@ -6,7 +6,7 @@ import {
   chatMessagesActions,
   ChatMessageAction,
 } from '../shared/schema';
-import { eq, inArray, and } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { LlmService } from '../shared/llm.service';
 
 @Injectable()
@@ -61,29 +61,14 @@ export class ChatService {
 
   async addUserMessage(sessionId: number, content: string) {
     // Buscar o último openaiMessageId do assistente
-    const lastAssistantMsg = await this.databaseService.db
-      .select({ openaiMessageId: chatMessages.openaiMessageId })
-      .from(chatMessages)
-      .where(
-        and(
-          eq(chatMessages.chatSessionId, sessionId),
-          eq(chatMessages.sender, 'assistant'),
-        ),
-      )
-      .orderBy(chatMessages.createdAt)
-      .limit(1);
-    const previousMessageId =
-      lastAssistantMsg.length > 0 ? lastAssistantMsg[0].openaiMessageId : null;
+    // (previousMessageId logic removed as it is no longer used)
 
     const userMessage = await this.addMessageToSession(
       sessionId,
       content,
       'user',
     );
-    const llmResponse = (await this.llmService.answerMessage(
-      content,
-      previousMessageId,
-    )) as {
+    const llmResponse = (await this.llmService.answerMessage(content)) as {
       message: string;
       action: { type: string; payload?: unknown };
       responseId: string;
