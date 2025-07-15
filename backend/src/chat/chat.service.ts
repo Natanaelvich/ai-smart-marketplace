@@ -1,12 +1,18 @@
-import { Injectable, BadGatewayException } from '@nestjs/common';
+import {
+  Injectable,
+  BadGatewayException,
+  ConflictException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DatabaseService } from '../shared/database.service';
 import {
   chatSessions,
   chatMessages,
   chatMessagesActions,
   ChatMessageAction,
+  products,
 } from '../shared/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, inArray, lt } from 'drizzle-orm';
 import { LlmService } from '../shared/llm.service';
 
 @Injectable()
@@ -94,6 +100,89 @@ export class ChatService {
         .onConflictDoNothing();
     }
     return userMessage;
+  }
+
+  async confirmAction(sessionId: number, actionId: number) {
+    // Check if session exists
+    const session = await this.databaseService.db
+      .select()
+      .from(chatSessions)
+      .where(eq(chatSessions.id, sessionId));
+    if (session.length === 0) {
+      return null;
+    }
+    // Find the action and ensure it belongs to a message in this session
+    const action = await this.databaseService.db
+      .select({
+        id: chatMessagesActions.id,
+        chatMessageId: chatMessagesActions.chatMessageId,
+        actionType: chatMessagesActions.actionType,
+        payload: chatMessagesActions.payload,
+        confirmedAt: chatMessagesActions.confirmedAt,
+        executedAt: chatMessagesActions.executedAt,
+        chatSessionId: chatMessages.chatSessionId,
+        messageId: chatMessages.id,
+      })
+      .from(chatMessagesActions)
+      .innerJoin(
+        chatMessages,
+        eq(chatMessagesActions.chatMessageId, chatMessages.id),
+      )
+      .where(
+        and(
+          eq(chatMessagesActions.id, actionId),
+          eq(chatMessages.chatSessionId, sessionId),
+        ),
+      );
+    if (action.length === 0) {
+      return null;
+    }
+    const actionRow = action[0];
+    if (actionRow.confirmedAt) {
+      throw new ConflictException('This action has already been confirmed.');
+    }
+    // Update confirmed_at
+    await this.databaseService.db
+      .update(chatMessagesActions)
+      .set({ confirmedAt: new Date() })
+      .where(eq(chatMessagesActions.id, actionId));
+    if (actionRow.actionType === 'suggest_carts') {
+      const payload = actionRow.payload as { input: string };
+      const embeddings = await this.llmService.embedInput(payload.input);
+      if (!embeddings) {
+        throw new BadGatewayException('Failed to get embeddings from the LLM');
+      }
+      // Find relevant products grouped by store (embedding <=> product.embedding < 0.65)
+      const relevantProducts = await this.databaseService.db
+        .select({
+          storeId: products.storeId,
+          id: products.id,
+          name: products.name,
+          price: products.price,
+        })
+        .from(products)
+        .where(lt(products.embedding['<=>'](embeddings.embedding), 0.65));
+      // Group by storeId
+      const grouped = relevantProducts.reduce(
+        (acc, prod) => {
+          if (!acc[prod.storeId]) acc[prod.storeId] = [];
+          acc[prod.storeId].push(prod);
+          return acc;
+        },
+        {} as Record<number, typeof relevantProducts>,
+      );
+      console.dir(grouped, { depth: null });
+    } else {
+      throw new InternalServerErrorException(
+        `Action type ${actionRow.actionType} is not supported.`,
+      );
+    }
+    // Return the updated action
+    const updated = await this.databaseService.db
+      .select()
+      .from(chatMessagesActions)
+      .where(eq(chatMessagesActions.id, actionId));
+    return updated[0];
   }
 
   private async addMessageToSession(
