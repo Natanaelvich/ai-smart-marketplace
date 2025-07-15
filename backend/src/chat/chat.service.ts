@@ -3,6 +3,7 @@ import {
   BadGatewayException,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../shared/database.service';
 import {
@@ -11,9 +12,20 @@ import {
   chatMessagesActions,
   ChatMessageAction,
   products,
+  carts,
+  cartItems,
 } from '../shared/schema';
 import { eq, and, inArray, lt } from 'drizzle-orm';
 import { LlmService } from '../shared/llm.service';
+
+// Add missing columns to carts table definition
+// (This is a temporary patch until the schema is updated)
+declare module '../shared/schema' {
+  interface carts {
+    score?: number | null;
+    suggestedByMessageId?: number | null;
+  }
+}
 
 @Injectable()
 export class ChatService {
@@ -31,6 +43,7 @@ export class ChatService {
   }
 
   async getChatSession(sessionId: number) {
+    // Use Drizzle to fetch session and messages
     const sessionArr = await this.databaseService.db
       .select()
       .from(chatSessions)
@@ -40,12 +53,12 @@ export class ChatService {
       return null;
     }
     const session = sessionArr[0];
-    // Buscar mensagens da sessão
+    // Fetch messages
     const messages = await this.databaseService.db
       .select()
       .from(chatMessages)
       .where(eq(chatMessages.chatSessionId, sessionId));
-    // Buscar ações relacionadas às mensagens
+    // Fetch actions
     const messageIds = messages.map((m) => m.id);
     let actions: ChatMessageAction[] = [];
     if (messageIds.length > 0) {
@@ -54,11 +67,30 @@ export class ChatService {
         .from(chatMessagesActions)
         .where(inArray(chatMessagesActions.chatMessageId, messageIds));
     }
-    // Agregar action em cada mensagem
-    const messagesWithAction = messages.map((msg) => ({
-      ...msg,
-      action: actions.find((a) => a.chatMessageId === msg.id) || null,
-    }));
+    // Attach actions to messages
+    const messagesWithAction = await Promise.all(
+      messages.map(async (msg) => {
+        const action = actions.find((a) => a.chatMessageId === msg.id) || null;
+        if (msg.messageType !== 'suggest_carts_result') {
+          return { ...msg, action };
+        }
+        // For suggest_carts_result, fetch carts and items
+        const cartsForMsg = await this.databaseService.db
+          .select()
+          .from(carts)
+          .where(eq(carts.suggestedByMessageId, msg.id));
+        const cartsWithItems = await Promise.all(
+          cartsForMsg.map(async (cart) => {
+            const items = await this.databaseService.db
+              .select()
+              .from(cartItems)
+              .where(eq(cartItems.cartId, cart.id));
+            return { ...cart, items };
+          }),
+        );
+        return { ...msg, action, carts: cartsWithItems };
+      }),
+    );
     return {
       ...session,
       messages: messagesWithAction,
@@ -109,7 +141,7 @@ export class ChatService {
       .from(chatSessions)
       .where(eq(chatSessions.id, sessionId));
     if (session.length === 0) {
-      return null;
+      throw new NotFoundException('Chat session not found');
     }
     // Find the action and ensure it belongs to a message in this session
     const action = await this.databaseService.db
@@ -135,7 +167,7 @@ export class ChatService {
         ),
       );
     if (action.length === 0) {
-      return null;
+      throw new NotFoundException('Chat message action not found');
     }
     const actionRow = action[0];
     if (actionRow.confirmedAt) {
@@ -161,28 +193,66 @@ export class ChatService {
           price: products.price,
         })
         .from(products)
-        .where(lt(products.embedding['<=>'](embeddings.embedding), 0.65));
+        .where(
+          lt(
+            (products as any).embedding['<=>'](embeddings.embedding),
+            0.65,
+          ) as any,
+        );
       // Group by storeId
-      const grouped = relevantProducts.reduce(
-        (acc, prod) => {
-          if (!acc[prod.storeId]) acc[prod.storeId] = [];
-          acc[prod.storeId].push(prod);
-          return acc;
-        },
-        {} as Record<number, typeof relevantProducts>,
+      const grouped: Record<
+        number,
+        { id: number; name: string; price: number; similarity: number }[]
+      > = {};
+      for (const prod of relevantProducts) {
+        if (!grouped[prod.storeId]) grouped[prod.storeId] = [];
+        grouped[prod.storeId].push({ ...prod, similarity: 0 }); // Set similarity to 0 if not available
+      }
+      const relevantProductsGroupedByStore = Object.entries(grouped).map(
+        ([store_id, products]) => ({
+          store_id: Number(store_id),
+          products,
+        }),
       );
-      console.dir(grouped, { depth: null });
+      if (relevantProductsGroupedByStore.length === 0) {
+        throw new NotFoundException(
+          'No relevant products found for the given input.',
+        );
+      }
+      const llmResponse = await this.llmService.suggestCarts(
+        relevantProductsGroupedByStore,
+        payload.input,
+      );
+      if (!llmResponse || !llmResponse.carts) {
+        throw new BadGatewayException(
+          'Failed to get cart suggestions from the LLM',
+        );
+      }
+      await this.databaseService.db
+        .update(chatMessagesActions)
+        .set({ executedAt: new Date() })
+        .where(eq(chatMessagesActions.id, actionId));
+      const message = await this.addMessageToSession(
+        sessionId,
+        llmResponse.response,
+        'assistant',
+        llmResponse.responseId,
+        'suggest_carts_result',
+      );
+      await this.saveSuggestedCarts(
+        message.id,
+        llmResponse.carts as {
+          store_id: number;
+          score: number;
+          products: { id: number; quantity: number }[];
+        }[],
+      );
+      return actionRow;
     } else {
       throw new InternalServerErrorException(
         `Action type ${actionRow.actionType} is not supported.`,
       );
     }
-    // Return the updated action
-    const updated = await this.databaseService.db
-      .select()
-      .from(chatMessagesActions)
-      .where(eq(chatMessagesActions.id, actionId));
-    return updated[0];
   }
 
   private async addMessageToSession(
@@ -203,5 +273,43 @@ export class ChatService {
       })
       .returning();
     return result[0];
+  }
+
+  private async saveSuggestedCarts(
+    messageId: number,
+    suggestedCarts: {
+      store_id: number;
+      score: number;
+      products: {
+        id: number;
+        quantity: number;
+      }[];
+    }[],
+  ) {
+    for (const cart of suggestedCarts) {
+      const [cartResult] = await this.databaseService.db
+        .insert(carts)
+        .values({
+          userId: 1, // TODO: get actual userId
+          storeId: cart.store_id,
+          score: cart.score,
+          suggestedByMessageId: messageId,
+          active: false,
+        })
+        .returning();
+      for (const product of cart.products) {
+        await this.databaseService.db
+          .insert(cartItems)
+          .values({
+            cartId: cartResult.id,
+            productId: product.id,
+            quantity: product.quantity,
+          })
+          .onConflictDoUpdate({
+            target: [cartItems.cartId, cartItems.productId],
+            set: { quantity: product.quantity },
+          });
+      }
+    }
   }
 }
