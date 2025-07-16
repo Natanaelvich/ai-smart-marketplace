@@ -27,6 +27,18 @@ declare module '../shared/schema' {
   }
 }
 
+// Definir tipo auxiliar para mensagem populada
+export type MessageWithAction = {
+  id: number;
+  chatSessionId: number;
+  content: string;
+  sender: string;
+  openaiMessageId?: string | null;
+  createdAt: Date;
+  messageType?: string;
+  action: ChatMessageAction | null;
+};
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -311,5 +323,74 @@ export class ChatService {
           });
       }
     }
+  }
+
+  async chooseCart(cartId: number, userId: number) {
+    const cart = await this.databaseService.db
+      .select()
+      .from(carts)
+      .where(eq(carts.id, cartId));
+
+    if (cart.length === 0) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    await this.databaseService.db
+      .update(carts)
+      .set({ active: false })
+      .where(and(eq(carts.userId, userId), eq(carts.active, true)));
+
+    await this.databaseService.db
+      .update(carts)
+      .set({ active: true })
+      .where(eq(carts.id, cartId));
+  }
+
+  async getChatSessions(userId: number): Promise<
+    Array<{
+      id: number;
+      userId: number;
+      createdAt: Date;
+      messages: MessageWithAction[];
+    }>
+  > {
+    // Busca todas as sessões do usuário
+    const sessions = await this.databaseService.db
+      .select()
+      .from(chatSessions)
+      .where(eq(chatSessions.userId, userId));
+    // Para cada sessão, busca as mensagens
+    const sessionIds = sessions.map((s) => s.id);
+    let messages: MessageWithAction[] = [];
+    if (sessionIds.length > 0) {
+      messages = (await this.databaseService.db
+        .select()
+        .from(chatMessages)
+        .where(
+          inArray(chatMessages.chatSessionId, sessionIds),
+        )) as MessageWithAction[];
+    }
+    // Busca actions para as mensagens
+    const messageIds = messages.map((m) => m.id);
+    let actions: ChatMessageAction[] = [];
+    if (messageIds.length > 0) {
+      actions = await this.databaseService.db
+        .select()
+        .from(chatMessagesActions)
+        .where(inArray(chatMessagesActions.chatMessageId, messageIds));
+    }
+    // Monta as mensagens populadas
+    const messagesBySession: Record<number, MessageWithAction[]> = {};
+    for (const msg of messages) {
+      const action = actions.find((a) => a.chatMessageId === msg.id) || null;
+      messagesBySession[msg.chatSessionId] =
+        messagesBySession[msg.chatSessionId] || [];
+      messagesBySession[msg.chatSessionId].push({ ...msg, action });
+    }
+    // Retorna as sessões com as mensagens populadas
+    return sessions.map((session) => ({
+      ...session,
+      messages: messagesBySession[session.id] || [],
+    }));
   }
 }

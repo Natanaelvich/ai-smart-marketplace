@@ -17,6 +17,11 @@ export class ChatController {
     const session = await this.chatService.createChatSession(this.userId);
     return session;
   }
+  @Get()
+  async getChatSessions() {
+    const sessions = await this.chatService.getChatSessions(this.userId);
+    return sessions;
+  }
   @Get(':sessionId')
   async getChatSession(@Param('sessionId') sessionId: string) {
     const session = await this.chatService.getChatSession(Number(sessionId));
@@ -43,5 +48,10 @@ export class ChatController {
   ) {
     await this.chatService.confirmAction(sessionId, actionId);
     // No content on success
+  }
+
+  @Post(':cartId/choose')
+  async chooseCart(@Param('cartId') cartId: number) {
+    await this.chatService.chooseCart(cartId, this.userId);
   }
 }
