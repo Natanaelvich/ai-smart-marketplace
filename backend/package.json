@@ -25,7 +25,8 @@
     "db:introspect": "drizzle-kit introspect",
     "db:seed": "tsx src/shared/seeds.ts",
     "db:setup": "tsx scripts/migrate-and-seed.ts",
-    "db:reset": "npm run db:setup"
+    "db:reset": "npm run db:setup",
+    "db:diagram": "PGPASSWORD=postgres npx pg-mermaid --dbname postgres --username postgres"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
