@@ -2,6 +2,26 @@
 
 Intelligent marketplace developed as a study project to explore AI integration with modern web technologies. Fullstack system with semantic search, product catalog, and intelligent recommendations.
 
+## 🖼️ E2E Visual Flow (Chat)
+
+Abaixo, um exemplo visual do fluxo de testes E2E do chat usando Playwright:
+
+1. **Tela inicial do assistente**
+
+![Home](.docs/images/01-home.png)
+
+2. **Iniciando uma nova conversa**
+
+![Nova Conversa](.docs/images/02-nova-conversa.png)
+
+3. **Mensagem enviada pelo usuário**
+
+![Mensagem Enviada](.docs/images/03-mensagem-enviada.png)
+
+4. **Resposta do assistente**
+
+![Resposta Assistente](.docs/images/04-resposta-assistente.png) 
+
 ## 🏗️ Architecture
 
 **Containerized Fullstack Application**
