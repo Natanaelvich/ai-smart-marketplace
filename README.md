@@ -268,6 +268,6 @@ npm run lint
 
 Study project - feel free to fork and experiment!
 
-## 📄 License
+## 📝 License
 
-This project is for educational purposes. 
+This project is licensed under the MIT License. See the LICENSE file for details. 
