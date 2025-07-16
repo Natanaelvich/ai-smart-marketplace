@@ -190,7 +190,7 @@ export default function ChatPage() {
               disabled={loading}
               className="flex-1"
             />
-            <Button onClick={handleSendMessage} disabled={loading || !message.trim()}>
+            <Button onClick={handleSendMessage} disabled={loading || !message.trim()} name="send-message" id="send-message">
               <Send className="h-4 w-4" />
             </Button>
           </div>
