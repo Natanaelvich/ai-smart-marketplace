@@ -105,7 +105,7 @@ export class CartService {
     }
 
     const cartData = cartWithStore[0];
-    // Buscar itens do carrinho
+    // Buscar itens do carrinho com dados completos do produto
     const items = await this.databaseService.db
       .select({
         id: cartItems.id,
@@ -113,8 +113,14 @@ export class CartService {
         productId: cartItems.productId,
         quantity: cartItems.quantity,
         createdAt: cartItems.createdAt,
-        // Buscar preço do produto
         price: products.price,
+        name: products.name,
+        // Dados completos do produto
+        product: {
+          id: products.id,
+          name: products.name,
+          price: products.price,
+        },
       })
       .from(cartItems)
       .leftJoin(products, eq(cartItems.productId, products.id))
@@ -122,7 +128,7 @@ export class CartService {
 
     // Calcular total
     const total = items.reduce(
-      (acc, item) => acc + (item.price ?? 0) * item.quantity,
+      (acc, item) => acc + (item.product?.price ?? 0) * item.quantity,
       0,
     );
 
