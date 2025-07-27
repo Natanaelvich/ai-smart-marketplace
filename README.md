@@ -4,23 +4,39 @@ Intelligent marketplace developed as a study project to explore AI integration w
 
 ## 🖼️ E2E Visual Flow (Chat)
 
-Abaixo, um exemplo visual do fluxo de testes E2E do chat usando Playwright:
+Abaixo, um exemplo visual do fluxo completo de testes E2E do chat usando Playwright:
 
-1. **Tela inicial do assistente**
+### 1. **Tela inicial do assistente**
 
 ![Home](.docs/images/01-home.png)
 
-2. **Iniciando uma nova conversa**
+### 2. **Iniciando uma nova conversa**
 
 ![Nova Conversa](.docs/images/02-nova-conversa.png)
 
-3. **Mensagem enviada pelo usuário**
+### 3. **Mensagem enviada pelo usuário**
 
 ![Mensagem Enviada](.docs/images/03-mensagem-enviada.png)
 
-4. **Resposta do assistente**
+### 4. **Resposta do assistente**
 
-![Resposta Assistente](.docs/images/04-resposta-assistente.png) 
+![Resposta Assistente](.docs/images/04-resposta-assistente.png)
+
+### 5. **Mensagem de confirmação**
+
+![Mensagem Confirmação](.docs/images/05-mensagem-confirmacao.png)
+
+### 6. **Carrinho atualizado**
+
+![Carrinho Atualizado](.docs/images/06-carrinho-atualizado.png)
+
+### 7. **Carrinhos sugeridos**
+
+![Carrinhos Sugeridos](.docs/images/07-carrinhos-sugeridos.png)
+
+### 8. **Carrinho selecionado**
+
+![Carrinho Selecionado](.docs/images/08-carrinho-selecionado.png)
 
 ## 📊 Database Diagram
 
