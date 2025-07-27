@@ -116,20 +116,27 @@ export class LlmService {
   }
   async answerMessage(
     message: string,
+    conversationHistory: Array<{
+      role: 'user' | 'assistant';
+      content: string;
+    }> = [],
   ): Promise<(AnswerMessage & { responseId: string }) | null> {
     try {
+      const messages = [
+        {
+          role: 'system' as const,
+          content: LlmService.ANSWER_MESSAGE_PROMPT,
+        },
+        ...conversationHistory,
+        {
+          role: 'user' as const,
+          content: message,
+        },
+      ];
+
       const response = await this.client.chat.completions.parse({
         model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: LlmService.ANSWER_MESSAGE_PROMPT,
-          },
-          {
-            role: 'user',
-            content: message,
-          },
-        ],
+        messages,
         response_format: {
           type: 'json_schema',
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

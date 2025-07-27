@@ -109,15 +109,28 @@ export class ChatService {
   }
 
   async addUserMessage(sessionId: number, content: string) {
-    // Buscar o último openaiMessageId do assistente
-    // (previousMessageId logic removed as it is no longer used)
+    // Buscar mensagens anteriores da sessão para contexto
+    const session = await this.getChatSession(sessionId);
+    if (!session) {
+      throw new NotFoundException('Chat session not found');
+    }
 
     const userMessage = await this.addMessageToSession(
       sessionId,
       content,
       'user',
     );
-    const llmResponse = (await this.llmService.answerMessage(content)) as {
+
+    // Preparar histórico de mensagens para contexto
+    const conversationHistory = session.messages.map((msg) => ({
+      role: msg.sender === 'user' ? ('user' as const) : ('assistant' as const),
+      content: msg.content,
+    }));
+
+    const llmResponse = (await this.llmService.answerMessage(
+      content,
+      conversationHistory,
+    )) as {
       message: string;
       action: { type: string; payload?: unknown };
       responseId: string;
