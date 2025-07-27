@@ -16,6 +16,12 @@ const vector = customType<{ data: number[]; notNull: false; default: false }>({
   dataType() {
     return 'vector(1536)';
   },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value) as number[];
+  },
 });
 
 export const stores = pgTable('stores', {

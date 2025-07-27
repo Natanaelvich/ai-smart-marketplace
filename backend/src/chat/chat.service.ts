@@ -11,11 +11,10 @@ import {
   chatMessages,
   chatMessagesActions,
   ChatMessageAction,
-  products,
   carts,
   cartItems,
 } from '../shared/schema';
-import { eq, and, inArray, lt } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { LlmService } from '../shared/llm.service';
 
 // Add missing columns to carts table definition
@@ -196,29 +195,49 @@ export class ChatService {
       if (!embeddings) {
         throw new BadGatewayException('Failed to get embeddings from the LLM');
       }
-      // Find relevant products grouped by store (embedding <=> product.embedding < 0.65)
-      const relevantProducts = await this.databaseService.db
-        .select({
-          storeId: products.storeId,
-          id: products.id,
-          name: products.name,
-          price: products.price,
-        })
-        .from(products)
-        .where(
-          lt(
-            (products as any).embedding['<=>'](embeddings.embedding),
-            0.65,
-          ) as any,
+      // Find relevant products grouped by store using vector similarity search
+      const embeddingArray = embeddings.embedding;
+      const relevantProducts = await this.databaseService.db.execute(
+        sql`
+          SELECT 
+            store_id as "storeId",
+            id,
+            name,
+            price,
+            embedding <=> ${sql.raw(`'[${embeddingArray.join(',')}]'`)}::vector as similarity
+          FROM products 
+          WHERE embedding IS NOT NULL 
+            AND embedding <=> ${sql.raw(`'[${embeddingArray.join(',')}]'`)}::vector < 0.65
+          ORDER BY similarity ASC
+          LIMIT 50
+        `,
+      );
+
+      // If no products found with embeddings, return a helpful message
+      if (!relevantProducts.rows || relevantProducts.rows.length === 0) {
+        throw new NotFoundException(
+          'No products with embeddings found. Products are being processed for AI search capabilities.',
         );
+      }
       // Group by storeId
       const grouped: Record<
         number,
         { id: number; name: string; price: number; similarity: number }[]
       > = {};
-      for (const prod of relevantProducts) {
+      for (const prod of relevantProducts.rows as Array<{
+        storeId: number;
+        id: number;
+        name: string;
+        price: number;
+        similarity: string;
+      }>) {
         if (!grouped[prod.storeId]) grouped[prod.storeId] = [];
-        grouped[prod.storeId].push({ ...prod, similarity: 0 }); // Set similarity to 0 if not available
+        grouped[prod.storeId].push({
+          id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          similarity: parseFloat(prod.similarity),
+        });
       }
       const relevantProductsGroupedByStore = Object.entries(grouped).map(
         ([store_id, products]) => ({
