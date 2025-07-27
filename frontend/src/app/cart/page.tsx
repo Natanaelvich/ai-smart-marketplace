@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import useSWR from "swr";
-import { getCart, removeCartItem, updateCartItemQuantity } from "../../api";
+import { getCart, removeCartItem, updateCartItemQuantity, clearAllCarts } from "../../api";
 import { Cart } from "@/types";
 
 export default function CartPage() {
@@ -64,6 +64,16 @@ export default function CartPage() {
     }
   };
 
+  const handleClearCart = async () => {
+    if (!cart.data) return;
+    try {
+      await clearAllCarts();
+      await cart.mutate(undefined); // Força revalidação dos dados
+    } catch (error) {
+      console.error("Erro ao limpar carrinho:", error);
+    }
+  };
+
   if (!cart.data || cart.data.items.length === 0) {
     return (
       <div className="p-6 pt-20 lg:pt-6">
@@ -88,10 +98,19 @@ export default function CartPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center justify-between">
                 <div>
                   <span>{cart.data.store.name}</span>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearCart}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Limpar Carrinho
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>

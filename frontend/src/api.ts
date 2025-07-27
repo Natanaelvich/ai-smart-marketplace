@@ -37,6 +37,11 @@ export const removeCartItem = async (cartId: number, productId: number) => {
   await api.delete(`/cart/${cartId}/items/${productId}`);
 }
 
+export const clearAllCarts = async () => {
+  const response = await api.delete('/cart');
+  return response.data as { ok: boolean };
+}
+
 export const getChatSessions = async () => {
   const response = await api.get("/chat");
   return response.data;
