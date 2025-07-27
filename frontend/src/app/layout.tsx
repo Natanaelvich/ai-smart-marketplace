@@ -9,12 +9,17 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Grocery AI - Marketplace Inteligente",
-  description: "Marketplace de supermercado com assistente de IA para receitas e comparação de preços",
+  description:
+    "Marketplace de supermercado com assistente de IA para receitas e comparação de preços",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-return (
-    <html lang="pt-BR">
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="pt-BR" suppressHydrationWarning data-lt-installed="true">
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-50">
           <Sidebar />
@@ -23,7 +28,7 @@ return (
           </main>
         </div>
         <Toaster richColors />
-</body>
-</html>
-);
+      </body>
+    </html>
+  );
 }
