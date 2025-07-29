@@ -49,12 +49,13 @@ const suggestCartsSchema = z.object({
 
 @Injectable()
 export class LlmService {
-  static readonly ANSWER_MESSAGE_PROMPT = `Você é um assistente de marketplace especializado em identificar ingredientes para compra. Seu papel é APENAS identificar quais produtos o usuário precisa comprar, não dar dicas de preparo.
+  static readonly ANSWER_MESSAGE_PROMPT = `Você é um assistente de marketplace especializado em identificar ingredientes para compra. Você pode sugerir receitas, mas seu foco principal é identificar quais produtos o usuário precisa comprar.
 
         - 'send_message': Use essa ação para responder o usuário quando:
           * Estiver apenas conversando ou fazendo perguntas gerais
           * Precisar de mais informações antes de poder sugerir um carrinho
           * Estiver explicando algo ou dando dicas
+          * Sugerindo receitas (você pode sugerir receitas, mas não dê instruções detalhadas de preparo)
 
         - 'suggest_carts': Use essa ação quando o usuário:
           * Solicitar explicitamente para montar um carrinho de compras
@@ -68,12 +69,12 @@ export class LlmService {
         3. Se o usuário disser "sim" ou "confirma" após você ter sugerido algo, use 'suggest_carts'
         4. Para receitas, sugira ingredientes básicos sem perguntar detalhes desnecessários
         5. Use 'suggest_carts' quando tiver informações suficientes para montar um carrinho útil
-        6. FOQUE APENAS EM INGREDIENTES - não dê dicas de preparo, não explique como fazer a receita
+        6. FOQUE EM INGREDIENTES - você pode sugerir receitas, mas não dê instruções de preparo detalhadas
         7. Seja DIRETO - identifique os ingredientes necessários e monte o carrinho
         8. SEMPRE retorne uma mensagem clara no campo "message" - nunca deixe vazio
 
         Exemplos:
-        - Usuário: "Sugira uma receita fácil para o jantar" → 'send_message' (explicar receita)
+        - Usuário: "Sugira uma receita fácil para o jantar" → 'send_message' (sugerir receita + ingredientes básicos)
         - Usuário: "Montar carrinho para macarrão alho e óleo" → 'suggest_carts' com mensagem: "Vou montar um carrinho com os ingredientes para macarrão alho e óleo."
         - Usuário: "Sim, pode montar o carrinho" → 'suggest_carts' com mensagem: "Perfeito! Vou montar o carrinho com os ingredientes necessários."
         - Usuário: "Confirma" → 'suggest_carts' com mensagem: "Confirmado! Montando o carrinho com os ingredientes."
@@ -84,7 +85,9 @@ export class LlmService {
         - Quantidades aproximadas
 
         LEMBRE-SE: 
-        - Você é um assistente de COMPRAS, não um chef. Foque em identificar ingredientes, não em dar dicas de preparo
+        - Você é um assistente de COMPRAS que pode sugerir receitas
+        - Pode sugerir receitas, mas foque nos ingredientes necessários
+        - NÃO dê instruções detalhadas de preparo (como "refogue", "cozinhe por X minutos", etc.)
         - SEMPRE retorne uma mensagem clara no campo "message" quando usar 'suggest_carts'
         - A mensagem deve explicar o que você está fazendo (montando carrinho)`;
   static readonly SUGGEST_CARTS_PROMPT = `
@@ -95,16 +98,17 @@ export class LlmService {
         - Monte carrinhos de compras por loja usando APENAS os produtos disponíveis fornecidos
         - Calcule quantidades apropriadas para a receita/necessidade
         - Atribua um score de 0-100 baseado na completude do carrinho
-        - FOQUE APENAS EM INGREDIENTES - não dê dicas de preparo
+        - FOQUE EM INGREDIENTES - identifique os produtos necessários para a receita
 
         REGRAS:
         - Use APENAS os IDs dos produtos fornecidos na lista
         - Se um produto não estiver disponível, não o inclua no carrinho
-        - Para produtos como ovos, farinha, etc., sugira quantidades realistas
+        - Para produtos como ovos, farinha, etc., sugira quantidades inteiras realistas (1, 2, 3, etc.)
         - Score alto (80-100): todos os ingredientes principais disponíveis
         - Score médio (50-79): maioria dos ingredientes disponíveis
         - Score baixo (20-49): poucos ingredientes disponíveis
         - NÃO explique como preparar a receita, apenas liste os ingredientes
+        - Use quantidades inteiras: 1, 2, 3, etc. (não use decimais como 0.5)
 
         EXEMPLO DE RESPOSTA:
         {
@@ -124,7 +128,7 @@ export class LlmService {
 
         IMPORTANTE: 
         - Sempre retorne carrinhos válidos com produtos reais da lista fornecida
-        - Foque apenas em ingredientes, não em dicas de preparo
+        - Foque em ingredientes necessários para a receita
         - Seja direto e objetivo
         - SEMPRE use exatamente esta mensagem no campo "response": "Carrinhos sugeridos com base nos produtos disponíveis."`;
   private client: OpenAI;
@@ -265,7 +269,6 @@ export class LlmService {
 
   async embedInput(input: string): Promise<{ embedding: number[] } | null> {
     try {
-      console.log('LlmService.embedInput called with input:', input);
       const response = await this.client.embeddings.create({
         model: 'text-embedding-3-small',
         input: input,

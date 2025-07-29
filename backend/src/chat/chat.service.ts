@@ -267,6 +267,7 @@ export class ChatService {
         relevantProductsGroupedByStore,
         payload.input,
       );
+
       if (!llmResponse || !llmResponse.carts) {
         throw new BadGatewayException(
           'Failed to get cart suggestions from the LLM',
@@ -338,20 +339,24 @@ export class ChatService {
           storeId: cart.store_id,
           score: cart.score,
           suggestedByMessageId: messageId,
-          active: false,
+          active: true,
         })
         .returning();
+
       for (const product of cart.products) {
+        // Converter quantidade para inteiro (mínimo 1)
+        const quantity = Math.max(1, Math.round(product.quantity));
+
         await this.databaseService.db
           .insert(cartItems)
           .values({
             cartId: cartResult.id,
             productId: product.id,
-            quantity: product.quantity,
+            quantity: quantity,
           })
           .onConflictDoUpdate({
             target: [cartItems.cartId, cartItems.productId],
-            set: { quantity: product.quantity },
+            set: { quantity: quantity },
           });
       }
     }
