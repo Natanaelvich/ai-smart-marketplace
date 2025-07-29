@@ -3,7 +3,11 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { DatabaseService } from '../src/shared/database.service';
-import { chatSessions, chatMessages } from '../src/shared/schema';
+import {
+  chatSessions,
+  chatMessages,
+  chatMessagesActions,
+} from '../src/shared/schema';
 
 describe('Chat (e2e)', () => {
   let app: INestApplication;
@@ -17,6 +21,8 @@ describe('Chat (e2e)', () => {
     app.enableShutdownHooks();
     await app.init();
     dbService = moduleFixture.get<DatabaseService>(DatabaseService);
+    // Remove actions first due to foreign key constraints
+    await dbService.db.delete(chatMessagesActions);
     await dbService.db.delete(chatMessages);
     await dbService.db.delete(chatSessions);
   });
