@@ -11,13 +11,27 @@ interface ChatMessageProps {
 }
 export default function ChatMessage({ message, onConfirmAction, onApplyCart }: ChatMessageProps) {
   const isUser = message.sender === "user";
+  
+  // Função para formatar a data de forma segura
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Agora";
+      }
+      return date.toLocaleTimeString();
+    } catch {
+      return "Agora";
+    }
+  };
+
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       <div className={`max-w-xs lg:max-w-md ${isUser ? "order-2" : "order-1"}`}>
         <div className={`px-4 py-2 rounded-lg ${isUser ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"}`}>
           <div className="flex items-center space-x-2 mb-1">
             {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-            <span className="text-xs opacity-75">{new Date(message.created_at).toLocaleTimeString()}</span>
+            <span className="text-xs opacity-75">{formatTime(message.created_at)}</span>
           </div>
           <p className="text-sm">{message.content}</p>
         </div>
